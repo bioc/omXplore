@@ -1,4 +1,4 @@
-# omXplore 1.7.1
+# omXplore 1.7.2
 
 * 1.5.1 - Replaced highcharter by plotly
 
