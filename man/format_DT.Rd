@@ -23,7 +23,8 @@ formatDT_server(
      NULL
  }),
   filename = "Prostar_export",
-  selection = "single"
+  selection = "single",
+  add_options = NULL
 )
 
 formatDT(data)
@@ -51,6 +52,8 @@ buttons or not.}
 
 \item{selection}{A \code{character(1)} which indicates the type of selection.
 Default is 'single'.}
+
+\item{add_options}{A \code{list()}, additional options for \code{DT::datatable}}
 }
 \value{
 NA

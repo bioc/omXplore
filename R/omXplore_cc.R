@@ -40,85 +40,101 @@ omXplore_cc_ui <- function(id) {
     ns <- NS(id)
     tagList(
         shinyjs::useShinyjs(),
+        tags$head(
+            tags$style(
+                HTML("
+                .custom-radio-group .btn.active {
+                    font-weight: bold;
+                    background-color: #c0c0c0; 
+                    color: black;
+                    font-size: 13px;
+                }
+                .custom-radio-group .btn {
+                    background-color: #f0f0f0; 
+                    color: black;
+                    font-size: 13px;
+                }
+                .custom-radio-group {
+                    position: static !important;
+                    margin-bottom: 15px !important;
+                    z-index: auto !important;
+                }")
+            )
+        ),
         shinyjs::hidden(
             div(id = ns("badFormatMsg"), h3(globals()$bad_format_txt))
         ),
         uiOutput(ns('containsCC')),
-        shinyjs::hidden(
-        div(
-            id = ns("main_tab_cc_UI"),
-            #tabPanel(
-                # title = "", value = "graphTab",
-                tabsetPanel(
-                    #id = "graphsPanel",
-                    tabPanel(
-                        "One-One Connected Components",
-                        tagList(
-                            fluidRow(
-                                column(width = 4, tagList(
-                                    # dl_ui(ns("OneOneDT_DL_btns")),
-                                    uiOutput(ns("OneOneDT_UI"))
-                                )),
-                                column(width = 8, uiOutput(ns("OneOneDTDetailed_UI")))
-                            )
-                        )
-                    ),
-                    
-                    #---------------------------------------------------------
-                    tabPanel(
-                        "One-Multi Connected Components",
-                        tagList(
-                            fluidRow(
-                                column(
-                                    width = 4,
-                                    tagList(
-                                        # dl_ui(ns("OneMultiDT_DL_btns")),
-                                        uiOutput(ns("OneMultiDT_UI"))
-                                    )
-                                ),
-                                column(width = 8, uiOutput(ns("OneMultiDTDetailed_UI")))
-                            )
-                        )
-                    ),
-                    
-                    #---------------------------------------------------------
-                    tabPanel(
-                        "Multi-Multi Connected Components",
-                        tagList(
-                            fluidRow(
-                                column(
-                                    width = 4,
-                                    radioButtons(ns("searchCC"),
-                                                 "Search for CC",
-                                                 choices = c(
-                                                     "Tabular view" = "tabular",
-                                                     "Graphical view" = "graphical"
-                                                 ),
-                                                 width = "150px"
-                                    )
-                                ),
-                                column(width = 8, uiOutput(ns("pepInfo_ui")))
-                            ),
-                            fluidRow(
-                                column(width = 6, tagList(
-                                    plotly::plotlyOutput(ns("jiji")),
-                                    # uiOutput(ns("CCMultiMulti_DL_btns_ui")),
-                                    shinyjs::hidden(uiOutput(ns("CCMultiMulti_UI")))
-                                )),
-                                column(
-                                    width = 6,
-                                    visNetwork::visNetworkOutput(ns("visNetCC"),
-                                                                 height = "600px"
-                                    )
+        
+        fluidPage(
+            div(class = "custom-radio-group",
+                shinyWidgets::radioGroupButtons(
+                    inputId = ns("tab_controller"),
+                    choices = c("One-One Connected Components",
+                                "One-Multi Connected Components", 
+                                "Multi-Multi Connected Components"),
+                    selected = "One-One Connected Components"
+                )
+            ),
+            
+            tabsetPanel(
+                id = ns("hidden_tabs"),
+                type = "hidden",  # Hide the default tabs
+                tabPanel(
+                    title = "One-One Connected Components",
+                    value = "One-One Connected Components",
+                    tagList(
+                        uiOutput(ns('No_OneOne')),
+                        uiOutput(ns("OneOneDT_UI")),
+                        uiOutput(ns("OneOneDTDetailed_UI"))
+                    )
+                ),
+                tabPanel(
+                    title = "One-Multi Connected Components",
+                    value = "One-Multi Connected Components",
+                    tagList(
+                        uiOutput(ns("No_OneMulti")),
+                        uiOutput(ns("OneMultiDT_UI")),
+                        uiOutput(ns("OneMultiDTDetailed_UI"))
+                    )
+                ),
+                tabPanel(
+                    title = "Multi-Multi Connected Components",
+                    value = "Multi-Multi Connected Components",
+                    tagList(
+                        uiOutput(ns("No_MultiMulti")),
+                        fluidRow(
+                            column(
+                                width = 4,
+                                radioButtons(ns("searchCC"),
+                                             "Search for CC",
+                                             choices = c(
+                                                 "Tabular view" = "tabular",
+                                                 "Graphical view" = "graphical"
+                                             ),
+                                             width = "150px"
                                 )
                             ),
-                            uiOutput(ns("CCDetailed"))
-                        )
+                            column(width = 8, uiOutput(ns("pepInfo_ui")))
+                        ),
+                        fluidRow(
+                            column(width = 6, tagList(
+                                plotly::plotlyOutput(ns("jiji")),
+                                # uiOutput(ns("CCMultiMulti_DL_btns_ui")),
+                                shinyjs::hidden(uiOutput(ns("CCMultiMulti_UI")))
+                            )),
+                            column(
+                                width = 6,
+                                visNetwork::visNetworkOutput(ns("visNetCC"),
+                                                             height = "600px"
+                                )
+                            )
+                        ),
+                        uiOutput(ns("CCDetailed"))
                     )
                 )
-            #)
+            )
         )
-      )
     )
 }
 
@@ -176,8 +192,8 @@ omXplore_cc_server <- function(
                 rv$cc <- GetCCInfos(get_cc(rv$data))
             }
             
-            shinyjs::toggle("main_tab_cc_UI",
-                            condition = !isTRUE(rv$cc.exists))
+            # shinyjs::toggle("main_tab_cc_UI",
+            #                 condition = isTRUE(rv$cc.exists))
         },
         priority = 1000
         )
@@ -187,6 +203,13 @@ omXplore_cc_server <- function(
             h3("The dataset contains no CC.")
         })
         
+        observeEvent(input$tab_controller, {
+            updateTabsetPanel(
+                session,
+                "hidden_tabs",
+                selected = input$tab_controller
+            )
+        })
         
         rvCC <- reactiveValues(
             ## selected CC in global CC list (tab or plot)
@@ -212,12 +235,24 @@ omXplore_cc_server <- function(
             })
         )
         
+        convert2df <- function(obj) {
+            if (is.vector(obj)) {
+                data.frame(as.list(obj))
+            } else {
+                obj
+            }
+        }
         
         ## //////////////////////////////////////////////////////////////////
         ##
-        ##    One One Connected Components
+        ##    One One Connected Components -----
         ##
         ## //////////////////////////////////////////////////////////////////
+        output$No_OneOne <- renderUI({
+            req(length(rv$cc$One_One) == 0)
+            h4("No One-One component.")
+        })
+        
         observeEvent(req(input$searchCC), {
             shinyjs::toggle("jiji", condition = input$searchCC == "graphical")
             shinyjs::toggle("CCMultiMulti_UI", condition = input$searchCC == "tabular")
@@ -245,11 +280,136 @@ omXplore_cc_server <- function(
         })
         
         
+        BuildOne2OneTab <- reactive({
+            # get_cc(rv$data)
+            ll <- rv$cc$One_One
+            
+            df <- cbind(
+                cbind(lapply(ll, function(x) {
+                    colnames(x)
+                })),
+                cbind(lapply(ll, function(x) {
+                    rownames(x)
+                }))
+            )
+            colnames(df) <- c("proteins", "peptides")
+            df
+        })
+        
+        # dl_server("OneOneDT_DL_btns",
+        #                          df.data = reactive({
+        #                            df <- BuildOne2OneTab()
+        #                            colnames(df) <- c("Proteins Ids",
+        # "Peptides Ids")
+        #                            df
+        #                          }),
+        #                          name = reactive({"CC_OneOne"}),
+        #                          colors = reactive({NULL}),
+        #                          df.tags = reactive({NULL})
+        #                          )
+        
+        output$OneOneDT_UI <- renderUI({
+            req(rv$obj.valid)
+            req(rv$cc.exists)
+            df <- BuildOne2OneTab()
+            df <- as.data.frame(
+                lapply(seq_len(ncol(df)), function(j) {
+                    vapply(df[, j], function(x) paste(x, collapse = ", "), character(1))
+                }),
+                stringsAsFactors = FALSE
+            )
+            colnames(df) <- c("Proteins Ids", "Peptides Ids")
+            
+            rvCC$OneOneDT_rows_selected <- formatDT_server("OneOneDT",
+                                                           data = reactive({
+                                                               df
+                                                           }),
+                                                           add_options = list(dom = "frtip",
+                                                                              deferRender = TRUE,
+                                                                              bLengthChange = FALSE,
+                                                                              scrollX = 400,
+                                                                              scrollY = 200,
+                                                                              scroller = TRUE,
+                                                                              orderClasses = TRUE,
+                                                                              autoWidth = FALSE,
+                                                                              columns.searchable = FALSE)
+            )
+            
+            formatDT_ui(ns("OneOneDT"))
+        })
+        
+        
+        
+        GetDataFor_OneOneDTDetailed <- reactive({
+            req(rv$obj.valid)
+            req(rv$cc.exists)
+            req(rvCC$OneOneDT_rows_selected())
+            
+            line <- rvCC$OneOneDT_rows_selected()
+            pepLine <- BuildOne2OneTab()[line, "peptides"]
+            
+            qdata <- SummarizedExperiment::assay(rv$data)
+            indices <- unlist(lapply(pepLine, function(x) {
+                which(rownames(qdata) == x)
+            }))
+            
+            qdata <- qdata[indices, ]
+            qmetacell <- get_metacell(rv$data)[indices, ]
+            
+            list(
+                qdata = convert2df(qdata),
+                qmetacell = convert2df(qmetacell)
+            )
+        })
+        
+        
+        output$OneOneDTDetailed_UI <- renderUI({
+            req(rv$obj.valid)
+            req(rv$cc.exists)
+            req(rvCC$OneOneDT_rows_selected())
+            
+            ll <- GetDataFor_OneOneDTDetailed()
+            
+            dt_style <- NULL
+            
+            if (!is.null(ll$qmetacell)) {
+                dt_style <- list(
+                    data = as.data.frame(ll$qmetacell),
+                    colors = BuildColorStyles(get_type(rv$data))
+                )
+            }
+            
+            formatDT_server("OneOneDTDetailed",
+                            data = reactive({
+                                ll$qdata
+                            }),
+                            dt_style = reactive({
+                                dt_style
+                            }), 
+                            showRownames = TRUE,
+                            add_options = list(dom = "frtip",
+                                               blengthChange = FALSE,
+                                               pageLength = 10,
+                                               displayLength = 10,
+                                               ordering = FALSE,
+                                               scrollX = TRUE,
+                                               header = FALSE,
+                                               server = FALSE)
+            )
+            
+            formatDT_ui(ns("OneOneDTDetailed"))
+        })
+        
+        
         ## //////////////////////////////////////////////////////////////////
         ##
-        ##    One Multi Connected Components
+        ##    One Multi Connected Components -----
         ##
         ## //////////////////////////////////////////////////////////////////
+        output$No_OneMulti <- renderUI({
+            req(length(rv$cc$One_Multi) == 0)
+            h4("No One-Multi component.")
+        })
         
         # select a CC in the jitter plot
         observeEvent(req(input$eventPointClicked), {
@@ -258,6 +418,137 @@ omXplore_cc_server <- function(
             rvCC$selectedCC <- this.index + 1
         })
         
+        
+        BuildOne2MultiTab <- reactive({
+            # get_cc(rv$data)
+            ll <- rv$cc$One_Multi
+            df <- cbind(
+                proteins = cbind(lapply(ll, function(x) {
+                    colnames(x)
+                })),
+                nPep = cbind(lapply(ll, function(x) {
+                    nrow(x)
+                })),
+                peptides = cbind(lapply(ll, function(x) {
+                    paste(rownames(x), collapse = ",")
+                }))
+            )
+            colnames(df) <- c("proteins", "nPep", "peptides")
+            
+            df
+        })
+        
+        # dl_server("OneMultiDT_DL_btns",
+        #                          df.data = reactive({
+        #                            df <- BuildOne2MultiTab()
+        #                            colnames(df) <- c("Proteins Ids", "nPep",
+        # "Peptides Ids")
+        #                            df
+        #                          }),
+        #                          name = reactive({"CC_OneMulti"}),
+        #                          colors = reactive({NULL}),
+        #                          df.tags = reactive({NULL})
+        #                          )
+        
+        
+        output$OneMultiDT_UI <- renderUI({
+            req(rv$obj.valid)
+            req(rv$cc.exists)
+            
+            df <- BuildOne2MultiTab()
+            colnames(df) <- c("Proteins Ids", "nPep", "Peptides Ids")
+            
+            rvCC$OneMultiDT_rows_selected <- formatDT_server("OneMultiDT",
+                                                             data = reactive({
+                                                                 df
+                                                             }),
+                                                             add_options = list(dom = "frtip",
+                                                                                deferRender = TRUE,
+                                                                                bLengthChange = FALSE,
+                                                                                scrollX = 400,
+                                                                                scrollY = 200,
+                                                                                scroller = TRUE,
+                                                                                orderClasses = TRUE,
+                                                                                autoWidth = FALSE,
+                                                                                columns.searchable = FALSE)
+            )
+            formatDT_ui(ns("OneMultiDT"))
+        })
+        
+        
+        GetDataFor_OneMultiDTDetailed <- reactive({
+            req(rv$obj.valid)
+            req(rv$cc.exists)
+            req(rvCC$OneMultiDT_rows_selected())
+            
+            
+            line <- rvCC$OneMultiDT_rows_selected()
+            pepLine <- unlist(strsplit(unlist(
+                BuildOne2MultiTab()[line, "peptides"]
+            ), split = ","))
+            
+            qdata <- SummarizedExperiment::assay(rv$data)
+            indices <- unlist(lapply(pepLine, function(x) {
+                which(rownames(qdata) == x)
+            }))
+            
+            qdata <- qdata[indices, ]
+            qmetacell <- (get_metacell(rv$data))[indices, ]
+            
+            list(
+                qdata = convert2df(qdata),
+                qmetacell = convert2df(qmetacell)
+            )
+        })
+        
+        
+        output$OneMultiDTDetailed_UI <- renderUI({
+            req(rv$obj.valid)
+            req(rv$cc.exists)
+            req(rvCC$OneMultiDT_rows_selected())
+            
+            ll <- GetDataFor_OneMultiDTDetailed()
+            
+            dt_style <- NULL
+            
+            if (!is.null(ll$qmetacell)) {
+                dt_style <- list(
+                    data = as.data.frame(ll$qmetacell),
+                    colors = BuildColorStyles(get_type(rv$data))
+                )
+            }
+            
+            formatDT_server("OneMultiDTDetailed",
+                            data = reactive({
+                                ll$qdata
+                            }),
+                            dt_style = reactive({
+                                dt_style
+                            }), 
+                            showRownames = TRUE,
+                            add_options = list(dom = "frtip",
+                                               blengthChange = FALSE,
+                                               pageLength = 10,
+                                               displayLength = 10,
+                                               ordering = FALSE,
+                                               scrollX = TRUE,
+                                               header = FALSE,
+                                               server = FALSE)
+            )
+            
+            
+            formatDT_ui(ns("OneMultiDTDetailed"))
+        })
+        
+        ## //////////////////////////////////////////////////////////////////
+        ##
+        ##    Multi-Multi Connected Components -----
+        ##
+        ## //////////////////////////////////////////////////////////////////
+        output$No_MultiMulti <- renderUI({
+            req(length(rv$cc$Multi_Multi) == 0)
+            h4("No Multi-Multi component.")
+        })
         
         output$visNetCC <- visNetwork::renderVisNetwork({
             req(rvCC$selectedCC)
@@ -283,25 +574,14 @@ omXplore_cc_server <- function(
                 visNetwork::visOptions(highlightNearest = TRUE)
         })
         
-        ## //////////////////////////////////////////////////////////////////
-        ##
-        ##    Multi-Multi Connected Components
-        ##
-        ## //////////////////////////////////////////////////////////////////
-        
-        
         # Plots Multi_Multi CC
         output$jiji <- plotly::renderPlotly({
             # tooltip <- 'Sequence'
-            
+            #browser()
             isolate({
                 local <- rv$cc$Multi_Multi
-                n.prot <- unlist(lapply(local, function(x) {
-                    ncol(x)
-                }))
-                n.pept <- unlist(lapply(local, function(x) {
-                    nrow(x)
-                }))
+                n.prot <- vapply(local, ncol, integer(1))
+                n.pept <- vapply(local, nrow, integer(1))
                 df <- tibble::tibble(
                     x = jitter(n.pept),
                     y = jitter(n.prot),
@@ -316,8 +596,9 @@ omXplore_cc_server <- function(
         
         
         GetDataFor_CCMultiMulti <- reactive({
+            #print("beff")
             req(length(rv$cc$Multi_Multi) > 0)
-            
+            #browser()
             ll <- rv$cc$Multi_Multi
             
             ll.pep <- cbind(
@@ -370,6 +651,8 @@ omXplore_cc_server <- function(
         
         # Show the DT data table ans gets the selected items from it
         output$CCMultiMulti_UI <- renderUI({
+            
+            #browser()
             rvCC$CCMultiMulti_rows_selected <- formatDT_server("CCMultiMulti",
                                                                data = reactive({
                                                                    GetDataFor_CCMultiMulti()
@@ -486,10 +769,6 @@ omXplore_cc_server <- function(
         })
         
         
-        
-        
-        
-        #-----------------------------------------------
         GetDataFor_CCDetailedSharedPep_UI <- reactive({
             rvCC$detailedselectedNode
             input$pepInfo
@@ -609,45 +888,6 @@ omXplore_cc_server <- function(
             formatDT_ui(ns("CCDetailedSpecPep"))
         })
         
-        
-        
-        
-        BuildOne2OneTab <- reactive({
-            # get_cc(rv$data)
-            ll <- rv$cc$One_One
-            
-            df <- cbind(
-                cbind(lapply(ll, function(x) {
-                    colnames(x)
-                })),
-                cbind(lapply(ll, function(x) {
-                    rownames(x)
-                }))
-            )
-            colnames(df) <- c("proteins", "peptides")
-            df
-        })
-        
-        BuildOne2MultiTab <- reactive({
-            # get_cc(rv$data)
-            ll <- rv$cc$One_Multi
-            df <- cbind(
-                proteins = cbind(lapply(ll, function(x) {
-                    colnames(x)
-                })),
-                nPep = cbind(lapply(ll, function(x) {
-                    nrow(x)
-                })),
-                peptides = cbind(lapply(ll, function(x) {
-                    paste(rownames(x), collapse = ",")
-                }))
-            )
-            colnames(df) <- c("proteins", "nPep", "peptides")
-            
-            df
-        })
-        
-        
         BuildMulti2AnyTab <- reactive({
             # get_cc(rv$data)
             
@@ -671,179 +911,6 @@ omXplore_cc_server <- function(
             colnames(df) <- c("proteins", "nPep", "peptides")
             
             df
-        })
-        
-        
-        
-        # dl_server("OneMultiDT_DL_btns",
-        #                          df.data = reactive({
-        #                            df <- BuildOne2MultiTab()
-        #                            colnames(df) <- c("Proteins Ids", "nPep",
-        # "Peptides Ids")
-        #                            df
-        #                          }),
-        #                          name = reactive({"CC_OneMulti"}),
-        #                          colors = reactive({NULL}),
-        #                          df.tags = reactive({NULL})
-        #                          )
-        
-        
-        output$OneMultiDT_UI <- renderUI({
-            # req(rv$isValid)
-            df <- BuildOne2MultiTab()
-            colnames(df) <- c("Proteins Ids", "nPep", "Peptides Ids")
-            
-            
-            rvCC$OneMultiDT_rows_selected <- formatDT_server("OneMultiDT",
-                                                             data = reactive({
-                                                                 df
-                                                             })
-            )
-            formatDT_ui(ns("OneMultiDT"))
-        })
-        
-        
-        GetDataFor_OneMultiDTDetailed <- reactive({
-            input$pepInfo
-            req(rvCC$OneMultiDT_rows_selected())
-            
-            
-            line <- rvCC$OneMultiDT_rows_selected()
-            pepLine <- unlist(strsplit(unlist(
-                BuildOne2MultiTab()[line, "peptides"]
-            ), split = ","))
-            
-            qdata <- SummarizedExperiment::assay(rv$data)
-            indices <- unlist(lapply(pepLine, function(x) {
-                which(rownames(qdata) == x)
-            }))
-            
-            qdata <- qdata[indices, ]
-            qmetacell <- (get_metacell(rv$data))[indices, ]
-            
-            list(
-                qdata = convert2df(qdata),
-                qmetacell = convert2df(qmetacell)
-            )
-        })
-        
-        
-        output$OneMultiDTDetailed_UI <- renderUI({
-            input$pepInfo
-            req(rvCC$OneMultiDT_rows_selected())
-            
-            ll <- GetDataFor_OneMultiDTDetailed()
-            
-            dt_style <- NULL
-            
-            if (!is.null(ll$qmetacell)) {
-                dt_style <- list(
-                    data = as.data.frame(ll$qmetacell),
-                    colors = BuildColorStyles(get_type(rv$data))
-                )
-            }
-            
-            formatDT_server("OneMultiDTDetailed",
-                            data = reactive({
-                                ll$qdata
-                            }),
-                            dt_style = reactive({
-                                dt_style
-                            })
-            )
-            
-            formatDT_ui(ns("OneMultiDTDetailed"))
-        })
-        
-        
-        
-        
-        # dl_server("OneOneDT_DL_btns",
-        #                          df.data = reactive({
-        #                            df <- BuildOne2OneTab()
-        #                            colnames(df) <- c("Proteins Ids",
-        # "Peptides Ids")
-        #                            df
-        #                          }),
-        #                          name = reactive({"CC_OneOne"}),
-        #                          colors = reactive({NULL}),
-        #                          df.tags = reactive({NULL})
-        #                          )
-        
-        
-        output$OneOneDT_UI <- renderUI({
-            # req(rv$isValid)
-            df <- BuildOne2OneTab()
-            colnames(df) <- c("Proteins Ids", "Peptides Ids")
-            rvCC$OneOneDT_rows_selected <- formatDT_server("OneOneDT",
-                                                           data = reactive({
-                                                               df
-                                                           })
-            )
-            
-            formatDT_ui(ns("OneOneDT"))
-        })
-        
-        
-        
-        GetDataFor_OneOneDTDetailed <- reactive({
-            # req(rv$isValid)
-            req(rvCC$OneOneDT_rows_selected())
-            
-            line <- rvCC$OneOneDT_rows_selected()
-            pepLine <- BuildOne2OneTab()[line, "peptides"]
-            
-            qdata <- SummarizedExperiment::assay(rv$data)
-            indices <- unlist(lapply(pepLine, function(x) {
-                which(rownames(qdata) == x)
-            }))
-            
-            qdata <- qdata[indices, ]
-            qmetacell <- get_metacell(rv$data)[indices, ]
-            
-            list(
-                qdata = convert2df(qdata),
-                qmetacell = convert2df(qmetacell)
-            )
-        })
-        
-        
-        
-        convert2df <- function(obj) {
-            if (is.vector(obj)) {
-                data.frame(as.list(obj))
-            } else {
-                obj
-            }
-        }
-        
-        
-        output$OneOneDTDetailed_UI <- renderUI({
-            # req(rv$isValid)
-            req(rvCC$OneOneDT_rows_selected())
-            
-            ll <- GetDataFor_OneOneDTDetailed()
-            
-            dt_style <- NULL
-            
-            if (!is.null(ll$qmetacell)) {
-                dt_style <- list(
-                    data = as.data.frame(ll$qmetacell),
-                    colors = BuildColorStyles(get_type(rv$data))
-                )
-            }
-            
-            
-            formatDT_server("OneOneDTDetailed",
-                            data = reactive({
-                                ll$qdata
-                            }),
-                            dt_style = reactive({
-                                dt_style
-                            })
-            )
-            
-            formatDT_ui(ns("OneOneDTDetailed"))
         })
     })
 }

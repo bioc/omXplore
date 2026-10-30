@@ -8,7 +8,7 @@
 \alias{GetCCInfos}
 \title{Display a CC}
 \usage{
-buildGraph(cc = NULL, meta = NULL)
+buildGraph(cc)
 
 display.CC.visNet(g = NULL, layout = "layout_with_fr")
 
@@ -18,8 +18,6 @@ GetCCInfos(cc)
 }
 \arguments{
 \item{cc}{A list of connected component}
-
-\item{meta}{A data.frame()}
 
 \item{g}{An instance of a graph}
 

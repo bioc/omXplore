@@ -23,6 +23,7 @@
 #' @param filename A `character(1)` which is the default filename for download.
 #' @param selection A `character(1)` which indicates the type of selection.
 #' Default is 'single'.
+#' @param add_options A `list()`, additional options for `DT::datatable`
 #'
 #' @name format_DT
 #'
@@ -87,7 +88,8 @@ formatDT_server <- function(
             NULL
         }),
         filename = "Prostar_export",
-        selection = "single") {
+        selection = "single",
+        add_options = NULL) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
@@ -124,7 +126,7 @@ formatDT_server <- function(
 
 
         observe({
-            req(data())
+            req(!is.null(data()))
             rv$data <- data()
             DT::replaceData(proxy, rv$data, resetPaging = FALSE)
         })
@@ -136,7 +138,7 @@ formatDT_server <- function(
 
 
         prepareDataset <- reactive({
-            req(rv$data)
+            req(!is.null(rv$data))
             df <- rv$data
 
             .data <- as.data.frame(dt_style()$data)
@@ -155,40 +157,42 @@ formatDT_server <- function(
 
         output$StaticDataTable <- DT::renderDataTable(server = TRUE, {
             req(length(rv$data) > 0)
+            
+            df <- prepareDataset()  
+            
+            offset <- if (isTRUE(showRownames)) 1 else 0
+            tgt2hide <- NULL
+            if (!is.null(dt_style()) && checkValidity()) {
+                n_style <- ncol(as.data.frame(dt_style()$data))
+                tgt2hide <- ncol(rv$data) + seq_len(n_style) - 1 + offset
+            }
+            
             .jscode <- DT::JS("$.fn.dataTable.render.ellipsis( 30 )")
-
+            base_def <- list(targets = "_all", className = "dt-center", render = .jscode)
+            
+            listoption <- list(
+                initComplete = initComplete(),
+                dom = "Bt",
+                autoWidth = TRUE,
+                columnDefs = if (is.null(tgt2hide)) {
+                    list(base_def)
+                } else {
+                    list(base_def,
+                         list(targets = tgt2hide, visible = FALSE))
+                }
+            )
+            
+            if (is.list(add_options)) {
+                listoption <- modifyList(listoption, add_options)
+            }
+            
             dt <- DT::datatable(
-                prepareDataset(),
+                df,
                 escape = FALSE,
                 selection = selection,
                 rownames = showRownames,
                 plugins = "ellipsis",
-                options = list(
-                    initComplete = initComplete(),
-                    dom = "Bt",
-                    autoWidth = TRUE,
-                    columnDefs = if (is.null(dt_style())) {
-                        list(list(
-                            targets = "_all",
-                            className = "dt-center",
-                            render = .jscode
-                        ))
-                    } else {
-                        list(
-                            list(
-                                targets = "_all",
-                                className = "dt-center",
-                                render = .jscode
-                            ),
-                            list(
-                                targets = rv$tgt2hide,
-                                visible = FALSE,
-                                className = "dt-center",
-                                render = .jscode
-                            )
-                        )
-                    }
-                )
+                options = listoption
             )
 
 

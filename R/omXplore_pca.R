@@ -197,11 +197,11 @@ omXplore_pca_server <- function(
             rv.pca$gramschmidt_PCA <- input$gramschmidt_PCA
         })
         observeEvent(req(input$approach_PCA), {
-            print("ava")
-            print(rv.pca$approach_PCA)
+            #print("ava")
+            #print(rv.pca$approach_PCA)
             rv.pca$approach_PCA <- input$approach_PCA
-            print("apr")
-            print(rv.pca$approach_PCA)
+            #print("apr")
+            #print(rv.pca$approach_PCA)
         })
         observeEvent(input$PCA_varScale, {
             rv.pca$PCA_varScale <- input$PCA_varScale

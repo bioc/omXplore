@@ -1,7 +1,6 @@
 #' @title Display a CC
 #'
 #' @param cc A Connected Component (a list)
-#' @param meta A data.frame()
 #' @param g An instance of a graph
 #' @param layout A `character(1)` which i the layout used in visNetwork.
 #' Default value is 'layout_with_fr'
@@ -29,75 +28,42 @@ NULL
 #' @rdname pep_prot_CC
 #' @return A list
 #' @export
-buildGraph <- function(
-        cc = NULL,
-        meta = NULL) {
-    if (is.null(cc)) {
-        message("cc is NULL. Abort...")
-        return(NULL)
-    }
-
-    nb.prot <- ncol(cc)
-    subX <- cc
-    # colnames(subX) <- colnames(cc)
-    subX <- as.matrix(subX)
-
-    nb.pep <- nrow(cc)
-    nb.pep.shared <- length(which(rowSums(subX) > 1))
-    nb.pep.spec <- length(which(rowSums(subX) == 1))
+buildGraph <- function(cc) {
+    # cc is the sparse sub-matrix of one connected component
+    subX <- as.matrix(cc)
+    
+    nb.pep  <- nrow(subX)
+    nb.prot <- ncol(subX)
     nb.total <- nb.prot + nb.pep
-    edge.list <- as.data.frame(which(subX == 1, arr.ind = TRUE))
-
-    def.grp <- c(rep("shared.peptide", nb.pep), rep("protein", nb.prot))
-    def.grp[which(rowSums(subX) == 1)] <- "spec.peptide"
-
-    buildNodesInfos <- function(cc, meta, info.indice = 1) {
-        nodes_infos <- NULL
-        if (!is.null(meta)) {
-            # nodes_infos <- rep("", nrow(cc)+ncol(cc))
-            nodes_infos <- vector()
-            # We add infos only on peptides nodes
-            for (i in seq(nrow(cc))) {
-                ind <- which(rownames(meta) == rownames(cc)[i])
-                nodes_infos <- c(
-                    nodes_infos,
-                    paste0(
-                        "<p>", colnames(meta)[info.indice], ":",
-                        meta[ind, info.indice], "</p>"
-                    )
-                )
-            }
-        }
-        nodes_infos
-    }
-
+    
+    pep.deg <- rowSums(subX != 0)   # number of proteins per peptide
+    
+    edge.list <- as.data.frame(which(subX != 0, arr.ind = TRUE))
+    
+    # Peptide groups: shared if linked to >1 protein, specific if exactly 1
+    def.grp <- c(
+        ifelse(pep.deg == 1, "spec.peptide", "shared.peptide"),
+        rep("protein", nb.prot)
+    )
+    
     nodes <- data.frame(
-        id = seq(nb.total),
+        id = seq_len(nb.total),
         group = def.grp,
         label = c(rownames(subX), colnames(subX)),
+        title = paste0("<p>", seq_len(nb.total), "<br>Tooltip !</p>"),
         size = c(rep(10, nb.pep), rep(20, nb.prot)),
         stringsAsFactors = FALSE
     )
-
-
-    title <- buildNodesInfos(cc, meta)
-    # if (!is.null(title)) {
-    #  nodes <- cbind(nodes, title)
-    # }
-
+    
     edges <- data.frame(
-        from = c(edge.list$row),
-        to = c(edge.list$col + nb.pep),
+        from = edge.list$row,
+        to = edge.list$col + nb.pep,
         stringsAsFactors = FALSE
     )
-
-    return(
-        list(
-            nodes = nodes,
-            edges = edges
-        )
-    )
+    
+    list(nodes = nodes, edges = edges)
 }
+
 
 
 

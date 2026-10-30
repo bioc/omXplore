@@ -91,8 +91,10 @@ wrapper_pca <- function(
 plotPCA_Eigen <- function(res.pca) {
     stopifnot(!is.null(res.pca))
 
+    pc_names <- rownames(res.pca$eig)
+    
     df <- data.frame(
-        PC = rownames(res.pca$eig),
+        PC = factor(pc_names, levels = pc_names),
         var = res.pca$eig[, 2],
         cumvar = res.pca$eig[, 3],
         eig = res.pca$eig[, 1]
@@ -113,7 +115,10 @@ plotPCA_Eigen <- function(res.pca) {
             marker = list(color = "darkblue", size = 6)
         ) |>
         plotly::layout(
-            xaxis = list(title = "Principal Components"),
+            xaxis = list(
+                title = "Principal Components",
+                categoryorder = "array",
+                categoryarray = pc_names),
             yaxis = list(
                 title = "% of variances",
                 range = c(0, 100),
@@ -188,8 +193,10 @@ plotPCA_Eigen_hc <- function(res.pca) {
         return(NULL)
     }
     
+    pc_names <- rownames(res.pca$eig)
+    
     df <- data.frame(
-        PC = rownames(res.pca$eig),
+        PC = factor(pc_names, levels = pc_names),
         var = res.pca$eig[, 2],
         cumvar = res.pca$eig[, 3],
         eig = res.pca$eig[, 1]
@@ -210,7 +217,10 @@ plotPCA_Eigen_hc <- function(res.pca) {
             marker = list(color = "darkblue", size = 6)
         ) |>
         plotly::layout(
-            xaxis = list(title = "Principal Components"),
+            xaxis = list(
+                title = "Principal Components",
+                categoryorder = "array",
+                categoryarray = pc_names),
             yaxis = list(
                 title = "% of variances",
                 range = c(0, 100),
