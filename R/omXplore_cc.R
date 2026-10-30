@@ -559,8 +559,7 @@ omXplore_cc_server <- function(
             # m <- local[[rvCC$selectedCC]]
             
             rvCC$selectedCCgraph <- buildGraph(
-                cc = local[[rvCC$selectedCC]],
-                meta = rowData(rv$data)
+                cc = local[[rvCC$selectedCC]]
                 # metadata = NULL
             )
             
